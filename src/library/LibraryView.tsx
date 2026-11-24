@@ -160,6 +160,11 @@ export function LibraryView() {
             cause this.
           </Message>
         )}
+        {status === 'blocked' && (
+          <Message title="My Shelf is open in another tab">
+            That tab is running an older version. Close it, and your library will open here.
+          </Message>
+        )}
         {status === 'ready' && books.length === 0 && (
           <div className="pt-[16vh]">
             <div className="shelf-board relative!" aria-hidden="true" />

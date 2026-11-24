@@ -1,10 +1,10 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import { Page } from './Page';
 import type { Box, PageRenderer } from './PageRenderer';
 import type { Layout, Spread } from './spreads';
 
-const DOUBLE_TURN_MS = 620;
-const SINGLE_TURN_MS = 340;
+export const DOUBLE_TURN_MS = 620;
+export const SINGLE_TURN_MS = 340;
 const EASING = 'cubic-bezier(0.45, 0.05, 0.35, 1)';
 /** Widest the block of unread or read pages gets at the edge of the book. */
 const MAX_EDGE = 7;
@@ -17,6 +17,8 @@ interface OpenBookProps {
   pageCount: number;
   /** Whether reaching this spread should be animated. */
   animate: boolean;
+  /** Set while zoomed in: the element the book is panned in. */
+  scroller: RefObject<HTMLElement | null> | null;
 }
 
 interface Turn {
@@ -26,7 +28,7 @@ interface Turn {
 
 /** The book itself. When `spread` changes, one leaf turns over from the old spread to the new one. */
 export function OpenBook(props: OpenBookProps) {
-  const { renderer, spread, layout, box, pageCount, animate } = props;
+  const { renderer, spread, layout, box, pageCount, animate, scroller } = props;
   const [shown, setShown] = useState({ spread, layout });
   const [turn, setTurn] = useState<Turn | null>(null);
 
@@ -68,7 +70,14 @@ export function OpenBook(props: OpenBookProps) {
     const under = turn ? (forward ? turn.to : turn.from) : shown.spread;
     return (
       <div className="open-book" data-turning={turn !== null} style={box}>
-        <Page renderer={renderer} page={under.right!} box={box} side="none" />
+        <Page
+          renderer={renderer}
+          page={under.right!}
+          box={box}
+          side="none"
+          scroller={scroller}
+          interactive={turn === null}
+        />
         {leaf}
       </div>
     );
@@ -89,14 +98,21 @@ export function OpenBook(props: OpenBookProps) {
       style={{
         width: box.width * 2,
         height: box.height,
-        transform: `translateX(${shift}px)`,
-        transition: animate ? `transform ${DOUBLE_TURN_MS}ms ${EASING}` : 'none',
+        transform: shift === 0 ? undefined : `translateX(${shift}px)`,
+        transition: turn ? `transform ${DOUBLE_TURN_MS}ms ${EASING}` : 'none',
       }}
     >
       {left !== null && (
         <div className="half half-left" style={box}>
           <span className="page-edge page-edge-left" style={{ width: Math.round(edge * read) }} />
-          <Page renderer={renderer} page={left} box={box} side="left" />
+          <Page
+            renderer={renderer}
+            page={left}
+            box={box}
+            side="left"
+            scroller={scroller}
+            interactive={turn === null}
+          />
         </div>
       )}
       {right !== null && (
@@ -105,7 +121,14 @@ export function OpenBook(props: OpenBookProps) {
             className="page-edge page-edge-right"
             style={{ width: Math.round(edge * (1 - read)) }}
           />
-          <Page renderer={renderer} page={right} box={box} side="right" />
+          <Page
+            renderer={renderer}
+            page={right}
+            box={box}
+            side="right"
+            scroller={scroller}
+            interactive={turn === null}
+          />
         </div>
       )}
       {leaf}

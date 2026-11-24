@@ -1,7 +1,7 @@
 // The legacy build ships the polyfills the modern one omits, so older Safari works too.
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 import workerUrl from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
-import type { PDFDocumentLoadingTask, PDFDocumentProxy } from 'pdfjs-dist';
+import type { PDFDocumentLoadingTask, PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist';
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 
@@ -60,6 +60,20 @@ export function classifyPdfError(error: unknown): 'password' | 'invalid' | 'unkn
   if (name === 'PasswordException') return 'password';
   if (name === 'InvalidPDFException' || name === 'FormatError') return 'invalid';
   return 'unknown';
+}
+
+/** Fills `container` with the page's text as invisible, selectable spans. See `.text-layer`. */
+export function createTextLayer(page: PDFPageProxy, container: HTMLElement) {
+  const viewport = page.getViewport({ scale: 1 });
+  const layer = new pdfjs.TextLayer({
+    textContentSource: page.streamTextContent({ disableNormalization: true }),
+    container,
+    viewport,
+  });
+  const { pageWidth, pageHeight } = viewport.rawDims as { pageWidth: number; pageHeight: number };
+  container.style.width = `calc(var(--total-scale-factor) * ${pageWidth}px)`;
+  container.style.height = `calc(var(--total-scale-factor) * ${pageHeight}px)`;
+  return layer;
 }
 
 /** Renders a whole page to a new canvas of the given pixel width. */

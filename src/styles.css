@@ -310,6 +310,16 @@
     flex-direction: column;
     background: var(--color-desk);
     overflow: hidden;
+    /* Only the text of the book can be selected, not the interface around it. */
+    -webkit-user-select: none;
+    user-select: none;
+
+    input,
+    textarea,
+    .text-layer {
+      -webkit-user-select: text;
+      user-select: text;
+    }
   }
   .reader-bar {
     position: relative;
@@ -331,26 +341,67 @@
     position: relative;
     flex: 1;
     min-height: 0;
-    padding: 0.75rem 0.75rem 0.75rem;
-    touch-action: pan-y pinch-zoom;
+    /* Pinching is handled by the reader, which re-renders the page instead of stretching it.
+       Horizontal panning is left to the browser only while there is something to pan. */
+    touch-action: pan-y;
+
+    &:has(> .is-zoomed) {
+      touch-action: pan-x pan-y;
+    }
+  }
+  .reader-main,
+  .reader-scroller {
+    padding: 0.75rem;
 
     @media (width >= 768px) {
       padding: 1rem 4rem 1.25rem;
     }
   }
+  /* Only measures the space available to the book at its resting size. */
   .reader-stage {
-    display: flex;
-    align-items: center;
-    justify-content: center;
     width: 100%;
     height: 100%;
+  }
+  .reader-scroller {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    display: flex;
+    /* Everything but the text lets the pointer through, to the zones that turn the page. */
+    pointer-events: none;
+
+    &.is-zoomed {
+      pointer-events: auto;
+      padding: 1rem;
+      overflow: auto;
+      overscroll-behavior: contain;
+      overflow-anchor: none;
+      scrollbar-width: thin;
+      scrollbar-color: #c9c5bb transparent;
+      cursor: grab;
+    }
+    &.is-zoomed:active {
+      cursor: grabbing;
+    }
+  }
+  .reader-content {
+    position: relative;
+    flex: none;
+    display: flex;
+    justify-content: center;
+    margin: auto;
     perspective: 6000px;
+
+    .is-zoomed & {
+      perspective: none;
+      /* Hides the empty half beside a lone first or last page from the scroll area. */
+      overflow: clip;
+    }
   }
 
   /* Each half of the screen turns the page; the arrow only appears at the edge on hover. */
   .turn-zone {
     position: absolute;
-    z-index: 1;
     top: 0;
     bottom: 0;
     width: 50%;
@@ -381,6 +432,10 @@
         opacity: 0.8;
       }
     }
+    /* Notes are in its place. */
+    .reader-main:has(.margin-note) .turn-zone:not(:focus-visible) & {
+      visibility: hidden;
+    }
     .turn-zone:focus-visible & {
       opacity: 1;
       outline: 2px solid var(--color-wood);
@@ -391,7 +446,11 @@
   .open-book {
     position: relative;
     flex: none;
-    transform-style: preserve-3d;
+
+    /* Only while a page turns: 3D layers can soften text. */
+    &[data-turning='true'] {
+      transform-style: preserve-3d;
+    }
   }
   .half {
     position: absolute;
@@ -426,6 +485,324 @@
       pointer-events: none;
     }
   }
+  .page-image {
+    position: absolute;
+  }
+  .page-canvas {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+  }
+  .page-detail {
+    position: absolute;
+    inset: 0;
+    /* It is replaced while panning and zooming, so it must never be what a finger is holding. */
+    pointer-events: none;
+  }
+
+  /* Text to select, exactly over the picture of it. The rules follow PDF.js's own text layer. */
+  .text-host {
+    position: absolute;
+    inset: 0;
+    pointer-events: auto;
+
+    .reader-scroller:not(.is-zoomed) & {
+      cursor: pointer;
+    }
+  }
+  .text-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    overflow: clip;
+    line-height: 1;
+    letter-spacing: normal;
+    word-spacing: normal;
+    text-align: initial;
+    -webkit-text-size-adjust: none;
+    text-size-adjust: none;
+    forced-color-adjust: none;
+    transform-origin: 0 0;
+    --min-font-size: 1;
+    --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+    --min-font-size-inv: calc(1 / var(--min-font-size));
+
+    &[data-main-rotation='90'] {
+      transform: rotate(90deg) translateY(-100%);
+    }
+    &[data-main-rotation='180'] {
+      transform: rotate(180deg) translate(-100%, -100%);
+    }
+    &[data-main-rotation='270'] {
+      transform: rotate(270deg) translateX(-100%);
+    }
+    span,
+    br {
+      position: absolute;
+      color: transparent;
+      white-space: pre;
+      transform-origin: 0% 0%;
+    }
+    span {
+      z-index: 1;
+      --font-height: 0;
+      --scale-x: 1;
+      --rotate: 0deg;
+      font-size: calc(var(--text-scale-factor) * var(--font-height));
+      transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+      cursor: text;
+    }
+    .is-over-highlight &,
+    .is-over-highlight & span {
+      cursor: pointer;
+    }
+    ::selection {
+      background: rgb(169 130 88 / 0.3);
+      color: transparent;
+    }
+    br::selection {
+      background: transparent;
+    }
+  }
+
+  /* ---------- Highlights and notes ---------- */
+
+  [data-color='yellow'] {
+    --highlight: #fdf0a3;
+    --highlight-line: #d8b642;
+  }
+  [data-color='green'] {
+    --highlight: #c9edcb;
+    --highlight-line: #76b77d;
+  }
+  [data-color='blue'] {
+    --highlight: #c6e2fa;
+    --highlight-line: #72a9d8;
+  }
+  [data-color='pink'] {
+    --highlight: #fbd0de;
+    --highlight-line: #dd8aa8;
+  }
+
+  .highlight {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    mix-blend-mode: multiply;
+
+    span {
+      position: absolute;
+      border-radius: 2px;
+      background: var(--highlight);
+      transition: background-color 180ms;
+    }
+    &[data-dark='true'] {
+      mix-blend-mode: normal;
+      opacity: 0.4;
+    }
+    &[data-emphasized='true'] span {
+      background-color: color-mix(in srgb, var(--highlight-line) 35%, var(--highlight));
+    }
+    &:focus-visible {
+      outline: none;
+
+      span {
+        outline: 2px solid var(--color-wood);
+      }
+    }
+    &.has-note span:last-child::after {
+      content: '';
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--highlight-line);
+    }
+  }
+
+  .swatch {
+    flex: none;
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 1px solid var(--highlight-line);
+    border-radius: 50%;
+    background: var(--highlight);
+    transition: transform 120ms;
+
+    &:hover {
+      transform: scale(1.12);
+    }
+    &[aria-pressed='true'] {
+      box-shadow:
+        0 0 0 2px #fff,
+        0 0 0 3.5px var(--highlight-line);
+    }
+    @media (pointer: coarse) {
+      width: 1.875rem;
+      height: 1.875rem;
+    }
+  }
+  .selection-toolbar {
+    position: absolute;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: 2.75rem;
+    padding: 0 0.375rem 0 0.75rem;
+    border: 1px solid var(--color-line);
+    border-radius: 0.5rem;
+    background: #fff;
+    box-shadow: 0 6px 24px rgb(60 50 40 / 0.16);
+    white-space: nowrap;
+  }
+
+  /* Covers the same area as the stage; notes extend beyond it towards the edge of the screen. */
+  .margin-notes {
+    position: absolute;
+    z-index: 2;
+    inset: 0.75rem;
+    pointer-events: none;
+    animation: fade-in 200ms both;
+
+    @media (width >= 768px) {
+      inset: 1rem 4rem 1.25rem;
+    }
+  }
+  .margin-note {
+    position: absolute;
+    pointer-events: auto;
+
+    &[data-editing='true'] {
+      z-index: 1;
+    }
+  }
+  /* Flat sticky notes, in the very colour of the highlight they belong to. */
+  .note-card,
+  .note-editor {
+    width: 100%;
+    background: var(--highlight);
+    /* Only shows where notes lie over each other or over a page. */
+    box-shadow: 0 0 0 1px var(--color-desk);
+    color: var(--color-ink);
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 0.9375rem;
+    line-height: 1.35;
+  }
+  .note-card {
+    display: flex;
+    transition: background-color 180ms;
+    min-height: 5.5rem;
+    padding: 0.625rem 0.75rem;
+    text-align: left;
+
+    [data-hovered='true'] > & {
+      background-color: color-mix(in srgb, var(--highlight-line) 14%, var(--highlight));
+    }
+    [data-density='close'] > & {
+      min-height: 3.75rem;
+    }
+    [data-density='tight'] > & {
+      min-height: 0;
+      padding-block: 0.4375rem;
+    }
+  }
+  .note-text {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 8;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+
+    [data-density='close'] & {
+      -webkit-line-clamp: 3;
+    }
+    [data-density='tight'] & {
+      -webkit-line-clamp: 1;
+    }
+  }
+  .note-editor {
+    .icon-button {
+      color: rgb(37 37 37 / 0.75);
+    }
+    .swatch {
+      border-color: rgb(0 0 0 / 0.22);
+
+      &[aria-pressed='true'] {
+        box-shadow:
+          0 0 0 2px #fff,
+          0 0 0 3.5px rgb(0 0 0 / 0.4);
+      }
+    }
+  }
+  .note-quote {
+    display: -webkit-box;
+    margin: 0.625rem 0.75rem 0;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    color: rgb(37 37 37 / 0.7);
+  }
+  .note-input {
+    display: block;
+    width: 100%;
+    max-height: 40vh;
+    padding: 0.625rem 0.75rem;
+    resize: none;
+    background: transparent;
+
+    &::placeholder {
+      color: rgb(37 37 37 / 0.6);
+    }
+    &:focus {
+      outline: none;
+    }
+    /* iOS zooms the page when a focused field is smaller than 16px. */
+    @media (pointer: coarse) {
+      font-size: 1rem;
+    }
+  }
+  /* Where there is no room at the sides, or notes are hidden. */
+  .note-sheet {
+    position: absolute;
+    z-index: 4;
+    left: 50%;
+    width: min(26rem, calc(100% - 1.5rem));
+    transform: translateX(-50%);
+    animation: fade-in 150ms both;
+
+    &[data-place='bottom'] {
+      bottom: max(0.75rem, env(safe-area-inset-bottom));
+
+      /* Leaves the page controls in reach. */
+      @media (width >= 768px) {
+        bottom: 4.25rem;
+      }
+    }
+    &[data-place='top'] {
+      top: 3.25rem;
+    }
+  }
+  .reader-toast {
+    position: absolute;
+    z-index: 4;
+    bottom: 4.25rem;
+    left: 50%;
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.5rem 0.875rem;
+    border-radius: 0.375rem;
+    background: var(--color-ink);
+    color: #fff;
+    font-size: 0.8125rem;
+    white-space: nowrap;
+    transform: translateX(-50%);
+    animation: fade-in 200ms both;
+  }
+
   .page-left::after {
     background: linear-gradient(
       to left,
@@ -545,6 +922,18 @@
       border-radius: 50%;
       background: #5f5c56;
     }
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .margin-notes {
+    animation: none;
   }
 }
 

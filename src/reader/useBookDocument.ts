@@ -1,14 +1,21 @@
 import { useEffect, useState } from 'react';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
-import { getBook, getFile } from '../lib/db';
+import { getBook, getFile, listHighlights } from '../lib/db';
 import { openPdf } from '../lib/pdf';
-import type { Book } from '../types';
+import type { Book, Highlight } from '../types';
 import { PageRenderer } from './PageRenderer';
 
 export type BookDocument =
   | { status: 'loading' }
   | { status: 'failed'; message: string }
-  | { status: 'ready'; book: Book; renderer: PageRenderer; pageCount: number; aspect: number };
+  | {
+      status: 'ready';
+      book: Book;
+      highlights: Highlight[];
+      renderer: PageRenderer;
+      pageCount: number;
+      aspect: number;
+    };
 
 /** Loads a stored book and opens its PDF, releasing everything when the reader closes. */
 export function useBookDocument(bookId: string): BookDocument {
@@ -20,7 +27,11 @@ export function useBookDocument(bookId: string): BookDocument {
     let renderer: PageRenderer | null = null;
 
     const load = async () => {
-      const [book, file] = await Promise.all([getBook(bookId), getFile(bookId)]);
+      const [book, file, highlights] = await Promise.all([
+        getBook(bookId),
+        getFile(bookId),
+        listHighlights(bookId),
+      ]);
       if (!active) return;
       if (!book || !file) {
         setState({ status: 'failed', message: 'This book is no longer on your shelf.' });
@@ -31,7 +42,7 @@ export function useBookDocument(bookId: string): BookDocument {
       const aspect = await typicalAspect(doc);
       if (!active) return;
       renderer = new PageRenderer(doc);
-      setState({ status: 'ready', book, renderer, pageCount: doc.numPages, aspect });
+      setState({ status: 'ready', book, highlights, renderer, pageCount: doc.numPages, aspect });
     };
 
     load().catch((error: unknown) => {

@@ -27,3 +27,36 @@ export interface NewBook {
   cover: Blob;
   file: Blob;
 }
+
+export const HIGHLIGHT_COLORS = ['yellow', 'green', 'blue', 'pink'] as const;
+export type HighlightColor = (typeof HIGHLIGHT_COLORS)[number];
+
+/** Part of a page, as fractions (0–1) of its size, so it holds at any zoom or layout. */
+export interface Rect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface HighlightSegment {
+  page: number;
+  /** One per line of text, in reading order. */
+  rects: Rect[];
+}
+
+/** Marked text, with an optional note. */
+export interface Highlight {
+  id: string;
+  bookId: string;
+  /** Usually one; a highlight that runs across facing pages has one for each. */
+  segments: HighlightSegment[];
+  text: string;
+  color: HighlightColor;
+  /** Empty when there is no note. */
+  note: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export type HighlightPatch = Partial<Pick<Highlight, 'color' | 'note'>>;

@@ -22,7 +22,7 @@ export interface ImportItem {
 
 interface Library {
   books: Book[];
-  status: 'loading' | 'ready' | 'failed';
+  status: 'loading' | 'ready' | 'blocked' | 'failed';
   imports: ImportItem[];
   importFiles: (files: Iterable<File>) => void;
   dismissImports: () => void;
@@ -47,6 +47,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let active = true;
+    db.onBlocked(() => active && setStatus('blocked'));
     db.listBooks().then(
       (stored) => {
         if (!active) return;

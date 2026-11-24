@@ -4,7 +4,14 @@ interface ReaderKeys {
   turn: (direction: 1 | -1, animate: boolean) => void;
   first: () => void;
   last: () => void;
+  zoomIn: () => void;
+  zoomOut: () => void;
+  resetZoom: () => void;
+  /** Scrolls a zoomed page. Absent when there is nothing to scroll. */
+  scroll?: (direction: 1 | -1) => void;
   toggleFullscreen?: () => void;
+  /** Closes an open note and clears the selection. */
+  dismiss: () => void;
 }
 
 const SLIDER_KEYS: Record<string, string> = { ArrowUp: 'ArrowRight', ArrowDown: 'ArrowLeft' };
@@ -17,11 +24,30 @@ export function useReaderKeys(keys: ReaderKeys) {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      if (event.altKey) return;
+      const actions = current.current;
       const input = event.target instanceof HTMLInputElement ? event.target : null;
-      if (input && input.type !== 'range') return;
+      const typing =
+        event.target instanceof HTMLTextAreaElement || (input !== null && input.type !== 'range');
+      const command = event.ctrlKey || event.metaKey;
 
-      const { turn, first, last, toggleFullscreen } = current.current;
+      // As in other PDF readers, Ctrl/Cmd zooms the page rather than the interface.
+      if (command || !typing) {
+        const zoom = {
+          '+': actions.zoomIn,
+          '=': actions.zoomIn,
+          '-': actions.zoomOut,
+          _: actions.zoomOut,
+          '0': actions.resetZoom,
+        }[event.key];
+        if (zoom) {
+          event.preventDefault();
+          zoom();
+          return;
+        }
+      }
+      if (command || typing) return;
+
       // A held-down key skims without animating each turn.
       const animate = !event.repeat;
       // On the slider, up and down step through the book like left and right do.
@@ -29,20 +55,28 @@ export function useReaderKeys(keys: ReaderKeys) {
       switch (key) {
         case 'ArrowRight':
         case 'PageDown':
-          turn(1, animate);
+          actions.turn(1, animate);
           break;
         case 'ArrowLeft':
         case 'PageUp':
-          turn(-1, animate);
+          actions.turn(-1, animate);
+          break;
+        case 'ArrowDown':
+        case 'ArrowUp':
+          if (!actions.scroll) return;
+          actions.scroll(key === 'ArrowDown' ? 1 : -1);
           break;
         case 'Home':
-          first();
+          actions.first();
           break;
         case 'End':
-          last();
+          actions.last();
+          break;
+        case 'Escape':
+          actions.dismiss();
           break;
         case 'f':
-          if (!event.repeat) toggleFullscreen?.();
+          if (!event.repeat) actions.toggleFullscreen?.();
           break;
         default:
           return;

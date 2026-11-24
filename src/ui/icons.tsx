@@ -27,6 +27,18 @@ export const SearchIcon = icon(
     <path d="M16 16l4 4" />
   </>,
 );
+export const ZoomInIcon = icon(
+  <>
+    <circle cx="11" cy="11" r="6.5" />
+    <path d="M16 16l4 4M11 8.5v5M8.5 11h5" />
+  </>,
+);
+export const ZoomOutIcon = icon(
+  <>
+    <circle cx="11" cy="11" r="6.5" />
+    <path d="M16 16l4 4M8.5 11h5" />
+  </>,
+);
 export const ChevronLeftIcon = icon(<path d="M14.5 5.5L8 12l6.5 6.5" />);
 export const ChevronRightIcon = icon(<path d="M9.5 5.5L16 12l-6.5 6.5" />);
 export const ChevronDownIcon = icon(<path d="M6 9l6 6 6-6" />);
@@ -45,6 +57,10 @@ export const DoublePageIcon = icon(
     <rect x="3.5" y="5.5" width="17" height="13" rx="1" />
     <path d="M12 5.5v13" />
   </>,
+);
+export const NoteIcon = icon(<path d="M5 5h14v10.5L14.5 20H5zM14.5 20v-4.5H19M8.5 9h7M8.5 12.5h4" />);
+export const TrashIcon = icon(
+  <path d="M5 7h14M10 7V4.5h4V7M7 7l.8 12.5h8.4L17 7M10.3 10.5v5.5M13.7 10.5v5.5" />,
 );
 export const CheckIcon = icon(<path d="M5 12.5l4.5 4.5L19 7.5" />);
 export const AlertIcon = icon(

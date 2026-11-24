@@ -48,7 +48,7 @@ function Caption({ book, onAction }: { book: Book; onAction: ShelfProps['onActio
         {book.author || 'Unknown author'}
       </p>
       {book.lastOpened !== null && (
-        <div className="mt-2 flex items-center gap-2">
+        <div className="mt-2.5">
           <div
             className="h-0.5 w-14 overflow-hidden rounded-full bg-line"
             role="progressbar"
@@ -59,7 +59,9 @@ function Caption({ book, onAction }: { book: Book; onAction: ShelfProps['onActio
           >
             <div className="h-full bg-wood" style={{ width: `${percent}%` }} />
           </div>
-          <span className="text-[11px] tabular-nums text-muted">{percent}%</span>
+          <p className="mt-1.5 truncate text-[11px] tabular-nums text-muted">
+            Page {book.currentPage} · {percent}%
+          </p>
         </div>
       )}
       <BookMenu book={book} onAction={(action) => onAction(action, book)} />
