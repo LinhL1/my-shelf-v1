@@ -1,0 +1,555 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Inter Variable', system-ui, sans-serif;
+  --font-serif: 'Source Serif 4 Variable', Georgia, serif;
+  --color-paper: #f7f6f2;
+  --color-desk: #eeece6;
+  --color-ink: #252525;
+  --color-muted: #777777;
+  --color-line: #e7e5e0;
+  --color-wood: #a98258;
+  --color-danger: #a23b32;
+}
+
+@layer base {
+  body {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  button,
+  select {
+    cursor: pointer;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-wood);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    height: 2.25rem;
+    padding-inline: 0.875rem;
+    border: 1px solid var(--color-line);
+    border-radius: 0.375rem;
+    background: #fff;
+    color: var(--color-ink);
+    font-size: 0.875rem;
+    transition: background-color 150ms, border-color 150ms;
+
+    &:hover {
+      border-color: #d3d0c8;
+    }
+    &:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+  }
+  .button-primary {
+    background: var(--color-ink);
+    border-color: var(--color-ink);
+    color: #fff;
+
+    &:hover {
+      background: #3a3a3a;
+      border-color: #3a3a3a;
+    }
+  }
+  .button-danger {
+    background: var(--color-danger);
+    border-color: var(--color-danger);
+    color: #fff;
+
+    &:hover {
+      background: #8d322a;
+      border-color: #8d322a;
+    }
+  }
+  .icon-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.375rem;
+    color: var(--color-muted);
+    transition: background-color 150ms, color 150ms, opacity 150ms;
+
+    &:hover:not(:disabled) {
+      background: rgb(0 0 0 / 0.05);
+      color: var(--color-ink);
+    }
+    &:disabled {
+      opacity: 0.3;
+      cursor: default;
+    }
+  }
+  .field {
+    width: 100%;
+    height: 2.25rem;
+    padding-inline: 0.75rem;
+    border: 1px solid var(--color-line);
+    border-radius: 0.375rem;
+    background: #fff;
+    font-size: 0.875rem;
+
+    &::placeholder {
+      color: var(--color-muted);
+    }
+    &:focus {
+      outline: none;
+      border-color: var(--color-muted);
+    }
+    /* iOS zooms the page when a focused field is smaller than 16px. */
+    @media (pointer: coarse) {
+      font-size: 1rem;
+    }
+  }
+  .dialog {
+    width: min(26rem, calc(100vw - 2rem));
+    margin: auto;
+    border: 1px solid var(--color-line);
+    border-radius: 0.5rem;
+    background: #fff;
+    color: inherit;
+    box-shadow: 0 16px 48px rgb(0 0 0 / 0.12);
+
+    &::backdrop {
+      background: rgb(37 37 37 / 0.28);
+    }
+  }
+  .spinner {
+    width: 0.875rem;
+    height: 0.875rem;
+    border: 1.5px solid var(--color-line);
+    border-top-color: var(--color-muted);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- Bookshelf ---------- */
+
+@layer components {
+  .shelf {
+    position: relative;
+  }
+  .shelf-row {
+    position: relative;
+    z-index: 1;
+    display: flex;
+  }
+  .shelf-slot {
+    flex: none;
+  }
+  .shelf-board {
+    position: absolute;
+    inset-inline: 0;
+    height: 20px;
+    margin-top: -5px;
+    border-radius: 1px;
+    /* The lighter strip is the top of the board the books stand on. */
+    background:
+      linear-gradient(to bottom, #cfae85 0 7px, #b08a5f 7px 8px, #bd976a 8px, #b58f62 100%);
+    box-shadow:
+      0 1px 1px rgb(60 40 20 / 0.18),
+      0 10px 16px -8px rgb(60 40 20 / 0.28);
+  }
+
+  .book-button {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    width: 100%;
+    border-radius: 2px;
+  }
+  .book {
+    position: relative;
+    display: block;
+    flex: none;
+    /* Eye level is just above the board, so books stand flat on it. */
+    perspective: 1500px;
+    perspective-origin: 50% 96%;
+  }
+  .book-body {
+    position: absolute;
+    inset: 0;
+    transform-style: preserve-3d;
+    transform: rotateY(var(--book-angle));
+    transition: transform 260ms cubic-bezier(0.2, 0.7, 0.3, 1);
+  }
+  .book-face {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    overflow: hidden;
+    background: var(--book-color);
+    backface-visibility: hidden;
+  }
+  .book-cover {
+    left: 0;
+    width: 100%;
+    border-radius: 0 2px 2px 0;
+    transform: translateZ(calc(var(--book-thickness) / 2));
+
+    img {
+      width: 100%;
+      height: 100%;
+    }
+    /* Hinge groove near the spine and a faint light falloff. */
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        to right,
+        rgb(0 0 0 / 0.16) 0,
+        rgb(255 255 255 / 0.14) 1.5%,
+        rgb(0 0 0 / 0) 3%,
+        rgb(0 0 0 / 0.09) 4.5%,
+        rgb(255 255 255 / 0.08) 6%,
+        rgb(0 0 0 / 0) 9%,
+        rgb(0 0 0 / 0) 70%,
+        rgb(0 0 0 / 0.05) 100%
+      );
+      box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.07);
+    }
+  }
+  .book-spine {
+    left: calc(var(--book-thickness) / -2);
+    width: var(--book-thickness);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-block: 14px;
+    transform: rotateY(-90deg);
+
+    /* Rounded back, turned slightly away from the light. */
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        to right,
+        rgb(0 0 0 / 0.3) 0,
+        rgb(0 0 0 / 0.14) 25%,
+        rgb(0 0 0 / 0.04) 55%,
+        rgb(0 0 0 / 0.1) 80%,
+        rgb(0 0 0 / 0.22) 100%
+      );
+      box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.06);
+    }
+  }
+  .book-spine-title {
+    max-height: 100%;
+    overflow: hidden;
+    writing-mode: vertical-rl;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-family: var(--font-serif);
+    font-weight: 500;
+    line-height: 1.1;
+    letter-spacing: 0.01em;
+  }
+  .book-shadow {
+    position: absolute;
+    bottom: -2px;
+    left: 4%;
+    right: 2%;
+    height: 9px;
+    background: rgb(40 25 10 / 0.42);
+    filter: blur(5px);
+    transition: opacity 260ms;
+  }
+
+  .book-button:hover .book-body,
+  .book-button:focus-visible .book-body {
+    transform: translateY(-4px) rotateY(calc(var(--book-angle) - 7deg));
+  }
+  .book-button:hover .book-shadow {
+    opacity: 0.7;
+  }
+
+  .book-menu-trigger {
+    @media (hover: hover) {
+      opacity: 0;
+    }
+    .shelf-slot:hover &,
+    &:focus-visible,
+    &.is-open {
+      opacity: 1;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------- Reader ---------- */
+
+@layer components {
+  .reader {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--color-desk);
+    overflow: hidden;
+  }
+  .reader-bar {
+    position: relative;
+    z-index: 2;
+    transition: opacity 300ms;
+
+    .is-idle & {
+      opacity: 0;
+    }
+    .is-idle &:focus-within {
+      opacity: 1;
+    }
+  }
+  .is-idle,
+  .is-idle * {
+    cursor: none;
+  }
+  .reader-main {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    padding: 0.75rem 0.75rem 0.75rem;
+    touch-action: pan-y pinch-zoom;
+
+    @media (width >= 768px) {
+      padding: 1rem 4rem 1.25rem;
+    }
+  }
+  .reader-stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    perspective: 6000px;
+  }
+
+  /* Each half of the screen turns the page; the arrow only appears at the edge on hover. */
+  .turn-zone {
+    position: absolute;
+    z-index: 1;
+    top: 0;
+    bottom: 0;
+    width: 50%;
+    display: flex;
+    align-items: center;
+    padding-inline: 1rem;
+    color: var(--color-muted);
+    -webkit-tap-highlight-color: transparent;
+
+    &.right-0 {
+      justify-content: flex-end;
+    }
+    &:disabled {
+      cursor: default;
+    }
+    &:focus-visible {
+      outline: none;
+    }
+  }
+  .turn-arrow {
+    width: 1.75rem;
+    height: 1.75rem;
+    opacity: 0;
+    transition: opacity 200ms;
+
+    @media (hover: hover) and (width >= 768px) {
+      .turn-zone:hover:not(:disabled) & {
+        opacity: 0.8;
+      }
+    }
+    .turn-zone:focus-visible & {
+      opacity: 1;
+      outline: 2px solid var(--color-wood);
+      border-radius: 4px;
+    }
+  }
+
+  .open-book {
+    position: relative;
+    flex: none;
+    transform-style: preserve-3d;
+  }
+  .half {
+    position: absolute;
+    top: 0;
+  }
+  .half-left {
+    left: 0;
+  }
+  .half-right {
+    right: 0;
+  }
+
+  .page {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #fff;
+    box-shadow:
+      0 0 0 1px rgb(60 50 40 / 0.06),
+      0 1px 2px rgb(60 50 40 / 0.08),
+      0 10px 28px rgb(60 50 40 / 0.12);
+
+    /* Paper curving into the binding. */
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+  }
+  .page-left::after {
+    background: linear-gradient(
+      to left,
+      rgb(60 50 40 / 0.2) 0,
+      rgb(60 50 40 / 0.09) 1.6%,
+      rgb(60 50 40 / 0.03) 5%,
+      transparent 9%
+    );
+  }
+  .page-right::after {
+    background: linear-gradient(
+      to right,
+      rgb(60 50 40 / 0.2) 0,
+      rgb(60 50 40 / 0.09) 1.6%,
+      rgb(60 50 40 / 0.03) 5%,
+      transparent 9%
+    );
+  }
+  .page-loading {
+    width: 1.25rem;
+    height: 1.25rem;
+    /* Most pages are ready well before this; a flash of spinner would only distract. */
+    opacity: 0;
+    animation:
+      spin 0.8s linear infinite,
+      appear 200ms 350ms forwards;
+  }
+
+  /* The stack of remaining pages, showing at the outer edges. */
+  .page-edge {
+    position: absolute;
+    top: 2px;
+    bottom: 2px;
+    background: repeating-linear-gradient(to right, #fbfaf7 0 1px, #dedbd3 1px 2px);
+    transition: width 400ms;
+  }
+  .page-edge-left {
+    right: 100%;
+  }
+  .page-edge-right {
+    left: 100%;
+  }
+
+  .leaf {
+    position: absolute;
+    top: 0;
+    transform-origin: left center;
+    transform-style: preserve-3d;
+    will-change: transform;
+  }
+  .leaf-face {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+  }
+  .leaf-back {
+    transform: rotateY(180deg);
+  }
+  .leaf-shade {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+  }
+  .leaf-shade-front {
+    background: linear-gradient(to right, rgb(50 40 30 / 0.04), rgb(50 40 30 / 0.2));
+  }
+  .leaf-shade-back {
+    background: linear-gradient(to left, rgb(50 40 30 / 0.04), rgb(50 40 30 / 0.2));
+  }
+
+  .page-field {
+    padding: 0.25rem;
+    border: 1px solid transparent;
+    border-radius: 0.25rem;
+    background: transparent;
+    text-align: center;
+    color: var(--color-ink);
+
+    &:hover {
+      border-color: rgb(0 0 0 / 0.1);
+    }
+    &:focus {
+      outline: none;
+      border-color: var(--color-muted);
+      background: #fff;
+    }
+  }
+
+  .page-slider {
+    height: 1.5rem;
+    appearance: none;
+    background: transparent;
+    cursor: pointer;
+
+    &::-webkit-slider-runnable-track {
+      height: 2px;
+      border-radius: 1px;
+      background: linear-gradient(to right, #8b8780 var(--fill), #d6d3cb var(--fill));
+    }
+    &::-moz-range-track {
+      height: 2px;
+      border-radius: 1px;
+      background: linear-gradient(to right, #8b8780 var(--fill), #d6d3cb var(--fill));
+    }
+    &::-webkit-slider-thumb {
+      appearance: none;
+      width: 10px;
+      height: 10px;
+      margin-top: -4px;
+      border-radius: 50%;
+      background: #5f5c56;
+    }
+    &::-moz-range-thumb {
+      width: 10px;
+      height: 10px;
+      border: 0;
+      border-radius: 50%;
+      background: #5f5c56;
+    }
+  }
+}
+
+@keyframes appear {
+  to {
+    opacity: 1;
+  }
+}
