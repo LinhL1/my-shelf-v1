@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import type { Book } from '../types';
 
 /** How far each book is turned away from the viewer, exposing its spine. */
@@ -48,11 +49,37 @@ const TYPICAL_FOOTPRINT = 164;
 
 /** Spacing and book scale for a shelf. On phones, books shrink just enough for two to fit side by side. */
 export function shelfMetrics(shelfWidth: number) {
-  if (shelfWidth >= COMPACT_WIDTH) return { gap: 32, padding: 32, scale: 1 };
-  const gap = 22;
-  const padding = 12;
+  if (shelfWidth >= COMPACT_WIDTH) return { gap: 32, padding: 44, scale: 1 };
+  const gap = 20;
+  const padding = 14;
   const scale = (shelfWidth - padding * 2 - gap) / 2 / TYPICAL_FOOTPRINT;
   return { gap, padding, scale: clamp(scale, 0.6, 1) };
+}
+
+/** The one viewpoint books and shelves share, at scale 1: distance to the books, and eye level above the board. */
+const CAMERA = 1400;
+const EYE = 340;
+/** Half the depth of a board. Books stand on its centre line; the widest, thickest one reaches just short of this. */
+const HALF_DEPTH = 96;
+/** Thickness of a board's front edge. */
+const EDGE = 20;
+
+/** How far below the books' centre line (px on screen) a point on the board at depth `z` appears. */
+const project = (z: number) => EYE * (CAMERA / (CAMERA - z) - 1);
+
+/** CSS variables that draw a board, and the books on it, from the same viewpoint. */
+export function shelfPerspective(scale: number, padding: number) {
+  const px = (value: number) => `${(value * scale).toFixed(2)}px`;
+  return {
+    '--camera': px(CAMERA),
+    '--eye': px(EYE),
+    '--board-back': px(-project(-HALF_DEPTH)),
+    '--board-front': px(project(HALF_DEPTH)),
+    '--board-edge': px(EDGE),
+    // Each book has its own vanishing point, so the ends of a board taper gently rather than by the full
+    // perspective of its width, which would leave the outer books hanging over the sides.
+    '--board-taper': `${padding * 0.6}px`,
+  } as CSSProperties;
 }
 
 export interface Placed {

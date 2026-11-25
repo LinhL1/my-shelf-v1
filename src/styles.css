@@ -152,18 +152,51 @@
   .shelf-slot {
     flex: none;
   }
-  .shelf-board {
+  /* Books stand along the middle of the board, so half of it lies behind that line. */
+  .shelf-board-position {
     position: absolute;
     inset-inline: 0;
-    height: 20px;
-    margin-top: -5px;
-    border-radius: 1px;
-    /* The lighter strip is the top of the board the books stand on. */
+    translate: 0 calc(-1 * var(--board-back));
+  }
+  .shelf-board {
+    position: relative;
+
+    /* Shadow the board casts on the wall below it. */
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 55% calc(var(--board-taper) * 0.8) -12px;
+      background: rgb(60 40 20 / 0.34);
+      filter: blur(11px);
+    }
+  }
+  .shelf-board-top {
+    position: relative;
+    height: calc(var(--board-back) + var(--board-front));
+    clip-path: polygon(
+      var(--board-taper) 0,
+      calc(100% - var(--board-taper)) 0,
+      100% 100%,
+      0 100%
+    );
     background:
-      linear-gradient(to bottom, #cfae85 0 7px, #b08a5f 7px 8px, #bd976a 8px, #b58f62 100%);
+      linear-gradient(to bottom, rgb(70 42 14 / 0.3), rgb(70 42 14 / 0.08) 35%, rgb(255 240 215 / 0.16)),
+      url('./library/wood-grain.svg') 0 0 / 900px 100%,
+      #cfab7f;
+  }
+  .shelf-board-front {
+    position: relative;
+    height: var(--board-edge);
+    border-radius: 0 0 2px 2px;
+    background:
+      linear-gradient(to bottom, rgb(60 34 10 / 0.04), rgb(60 34 10 / 0.26)),
+      url('./library/wood-grain.svg') -310px 0 / 900px 60px,
+      #b48c5e;
+    /* A worn upper corner that catches the light, and a darker lower one. */
     box-shadow:
-      0 1px 1px rgb(60 40 20 / 0.18),
-      0 10px 16px -8px rgb(60 40 20 / 0.28);
+      inset 0 1px 0 rgb(255 238 210 / 0.5),
+      inset 0 -1px 0 rgb(60 34 10 / 0.25),
+      0 1px 2px rgb(60 40 20 / 0.25);
   }
 
   .book-button {
@@ -171,15 +204,23 @@
     align-items: flex-end;
     justify-content: center;
     width: 100%;
+    /* Books are turned, so their near corner reaches below the line they stand on. */
+    height: calc(var(--row-height) + var(--board-front));
+    padding-bottom: var(--board-front);
     border-radius: 2px;
+
+    /* The usual wood colour would be lost against the board. */
+    &:focus-visible {
+      outline-color: var(--color-ink);
+    }
   }
   .book {
     position: relative;
     display: block;
     flex: none;
-    /* Eye level is just above the board, so books stand flat on it. */
-    perspective: 1500px;
-    perspective-origin: 50% 96%;
+    /* The same viewpoint the board is drawn from. Measured from the foot, which all books share. */
+    perspective: var(--camera);
+    perspective-origin: 50% calc(100% - var(--eye));
   }
   .book-body {
     position: absolute;
@@ -225,6 +266,17 @@
       box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.07);
     }
   }
+  /* Pages, held by the spine. Seen at so low an angle that lines along them would break up into dots. */
+  .book-top {
+    top: calc(var(--book-thickness) / -2);
+    left: 0;
+    width: 100%;
+    height: var(--book-thickness);
+    background: linear-gradient(to right, #cdc2ab, #ece4d3 14%);
+    /* An invisible outline makes browsers smooth the slanted edges. */
+    outline: 1px solid transparent;
+    transform: rotateX(90deg);
+  }
   .book-spine {
     left: calc(var(--book-thickness) / -2);
     width: var(--book-thickness);
@@ -261,23 +313,32 @@
     line-height: 1.1;
     letter-spacing: 0.01em;
   }
+  /* Lies on the board under the book: a tight contact shadow, and a soft one cast back and to the left,
+     away from the light. */
   .book-shadow {
     position: absolute;
-    bottom: -2px;
-    left: 4%;
-    right: 2%;
-    height: 9px;
-    background: rgb(40 25 10 / 0.42);
-    filter: blur(5px);
-    transition: opacity 260ms;
+    top: calc(100% - var(--book-thickness) / 2);
+    left: 0;
+    width: 100%;
+    height: var(--book-thickness);
+    background: rgb(40 25 10 / 0.5);
+    box-shadow:
+      0 0 5px 1px rgb(40 25 10 / 0.5),
+      -3px -12px 14px 1px rgb(40 25 10 / 0.34);
+    transform: rotateY(var(--book-angle)) rotateX(90deg);
+    transition:
+      transform 260ms cubic-bezier(0.2, 0.7, 0.3, 1),
+      opacity 260ms;
   }
 
   .book-button:hover .book-body,
   .book-button:focus-visible .book-body {
     transform: translateY(-4px) rotateY(calc(var(--book-angle) - 7deg));
   }
-  .book-button:hover .book-shadow {
+  .book-button:hover .book-shadow,
+  .book-button:focus-visible .book-shadow {
     opacity: 0.7;
+    transform: rotateY(calc(var(--book-angle) - 7deg)) rotateX(90deg);
   }
 
   .book-menu-trigger {

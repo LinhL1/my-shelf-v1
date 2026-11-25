@@ -7,12 +7,12 @@ import { usePreference } from '../lib/usePreference';
 import type { Book } from '../types';
 import { ChevronDownIcon, PlusIcon, SearchIcon } from '../ui/icons';
 import type { BookAction } from './BookMenu';
-import { packShelves, shelfMetrics } from './bookGeometry';
+import { packShelves, shelfMetrics, shelfPerspective } from './bookGeometry';
 import { EditBookDialog } from './EditBookDialog';
 import { ImportStatus } from './ImportStatus';
 import { RemoveBookDialog } from './RemoveBookDialog';
 import { selectBooks, SORTS, VIEWS, type Sort, type View } from './selectBooks';
-import { Shelf } from './Shelf';
+import { Shelf, ShelfBoard } from './Shelf';
 import { useFileDrop } from './useFileDrop';
 
 const VIEW_LABELS: Record<View, string> = {
@@ -147,6 +147,7 @@ export function LibraryView() {
                   items={items}
                   gap={gap}
                   padding={padding}
+                  scale={scale}
                   onAction={onAction}
                 />
               ))}
@@ -167,7 +168,9 @@ export function LibraryView() {
         )}
         {status === 'ready' && books.length === 0 && (
           <div className="pt-[16vh]">
-            <div className="shelf-board relative!" aria-hidden="true" />
+            <div style={shelfPerspective(scale, padding)}>
+              <ShelfBoard />
+            </div>
             <Message title="Your shelf is empty">
               <span className="block">Drop PDF files anywhere on this page, or choose them from your device.</span>
               <button type="button" className="button mt-5" onClick={pickFiles}>

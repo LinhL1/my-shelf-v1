@@ -7,7 +7,7 @@ import { BOOK_ANGLE, type BookSize } from './bookGeometry';
 /** Below this thickness (px) a spine title would not be legible. */
 const MIN_TITLED_SPINE = 17;
 
-/** A closed book standing upright: a CSS cuboid with a cover and a spine. */
+/** A closed book standing upright: a CSS cuboid with a cover, a spine and the top of its pages. */
 export function Book3D({ book, size }: { book: Book; size: BookSize }) {
   const cover = useCoverUrl(book.id);
   const { width, height, thickness } = size;
@@ -28,6 +28,7 @@ export function Book3D({ book, size }: { book: Book; size: BookSize }) {
         <span className="book-face book-cover">
           {cover && <img src={cover} alt="" draggable={false} />}
         </span>
+        <span className="book-face book-top" />
         <span
           className="book-face book-spine"
           style={{

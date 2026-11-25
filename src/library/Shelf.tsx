@@ -1,28 +1,33 @@
+import type { CSSProperties } from 'react';
 import { openBook } from '../lib/router';
 import type { Book } from '../types';
 import { Book3D } from './Book3D';
 import { BookMenu, type BookAction } from './BookMenu';
-import type { Placed } from './bookGeometry';
+import { shelfPerspective, type Placed } from './bookGeometry';
 
 interface ShelfProps {
   items: Placed[];
   gap: number;
   padding: number;
+  scale: number;
   onAction: (action: BookAction, book: Book) => void;
 }
 
 /** One shelf board with its books standing on it and their labels underneath. */
-export function Shelf({ items, gap, padding, onAction }: ShelfProps) {
+export function Shelf({ items, gap, padding, scale, onAction }: ShelfProps) {
   const height = Math.max(...items.map((i) => i.size.height));
   return (
-    <li className="shelf">
+    <li className="shelf" style={shelfPerspective(scale, padding)}>
+      <div className="shelf-board-position" style={{ top: height }}>
+        <ShelfBoard />
+      </div>
       <ul className="shelf-row" style={{ gap, paddingInline: padding }}>
         {items.map(({ book, size }) => (
           <li key={book.id} className="shelf-slot" style={{ width: size.footprint }}>
             <button
               type="button"
               className="book-button"
-              style={{ height }}
+              style={{ '--row-height': `${height}px` } as CSSProperties}
               onClick={() => openBook(book.id)}
               aria-label={`Open ${book.title}${book.author ? ` by ${book.author}` : ''}`}
             >
@@ -32,8 +37,17 @@ export function Shelf({ items, gap, padding, onAction }: ShelfProps) {
           </li>
         ))}
       </ul>
-      <div className="shelf-board" style={{ top: height }} aria-hidden="true" />
     </li>
+  );
+}
+
+/** A wooden board seen from slightly above. Expects the variables from `shelfPerspective`. */
+export function ShelfBoard() {
+  return (
+    <div className="shelf-board" aria-hidden="true">
+      <div className="shelf-board-top" />
+      <div className="shelf-board-front" />
+    </div>
   );
 }
 
