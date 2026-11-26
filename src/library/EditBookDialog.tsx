@@ -1,19 +1,32 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useLibrary } from '../lib/LibraryProvider';
+import { addTags, collectTags } from '../lib/tags';
 import type { Book } from '../types';
 import { Dialog } from '../ui/Dialog';
+import { StarRating } from './StarRating';
+import { TagField } from './TagField';
 
 export function EditBookDialog({ book, onClose }: { book: Book; onClose: () => void }) {
-  const { updateBook } = useLibrary();
+  const { books, updateBook } = useLibrary();
   const [title, setTitle] = useState(book.title);
   const [author, setAuthor] = useState(book.author);
+  const [tags, setTags] = useState(book.tags);
+  const [tagDraft, setTagDraft] = useState('');
+  const [rating, setRating] = useState(book.rating);
   const [error, setError] = useState('');
+  const knownTags = useMemo(() => collectTags(books).map((t) => t.tag), [books]);
 
   const save = async () => {
     const trimmed = title.trim();
     if (!trimmed) return;
     try {
-      await updateBook(book.id, { title: trimmed, author: author.trim() });
+      await updateBook(book.id, {
+        title: trimmed,
+        author: author.trim(),
+        // Whatever was typed but not yet added still counts.
+        tags: addTags(tags, tagDraft, knownTags),
+        rating,
+      });
       onClose();
     } catch (cause) {
       console.error(cause);
@@ -48,6 +61,14 @@ export function EditBookDialog({ book, onClose }: { book: Book; onClose: () => v
             onChange={(event) => setAuthor(event.target.value)}
           />
         </label>
+        <StarRating value={rating} onChange={setRating} />
+        <TagField
+          tags={tags}
+          onTagsChange={setTags}
+          draft={tagDraft}
+          onDraftChange={setTagDraft}
+          known={knownTags}
+        />
         <p className="text-xs leading-relaxed break-words text-muted">
           {book.fileName}
           <br />

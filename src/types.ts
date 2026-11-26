@@ -18,6 +18,10 @@ export interface Book {
   fileSize: number;
   /** PDF document fingerprint, used to detect duplicate imports. */
   fingerprint: string;
+  /** Free-form labels such as “TBR” or “Fiction”, in the order they were added. */
+  tags: string[];
+  /** 1–5 stars, or null when the book has not been rated. */
+  rating: number | null;
 }
 
 export type BookPatch = Partial<Omit<Book, 'id'>>;

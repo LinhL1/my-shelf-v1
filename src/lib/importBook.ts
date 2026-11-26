@@ -47,6 +47,8 @@ export async function prepareBook(file: File, existing: Book[]): Promise<NewBook
       fileName: file.name,
       fileSize: file.size,
       fingerprint,
+      tags: [],
+      rating: null,
     };
     return { book, cover: await toJpeg(cover.canvas), file };
   } catch (error) {

@@ -101,6 +101,103 @@ test('searches, sorts and filters', async ({ page }) => {
   expect(await titles(page)).toEqual(['Mixed Page Sizes']);
 });
 
+test('tags books and filters the shelf by tag', async ({ page }) => {
+  await importBooks(page, 'novel.pdf', 'thick.pdf', 'mixed.pdf');
+  const tagFilter = page.getByRole('group', { name: 'Filter by tag' });
+  await expect(tagFilter).toBeHidden();
+
+  const editTags = async (title: string, add: (field: import('@playwright/test').Locator) => Promise<void>) => {
+    await page.getByRole('button', { name: `Options for ${title}` }).click();
+    await page.getByRole('menuitem', { name: 'Edit details' }).click();
+    await add(page.getByRole('textbox', { name: 'Tags' }));
+    await page.getByRole('button', { name: 'Save' }).click();
+    await expect(page.getByRole('dialog')).toBeHidden();
+  };
+
+  // Enter and commas both add a tag; text left in the field is kept on save.
+  await editTags('The Lighthouse Keeper', async (field) => {
+    await field.fill('TBR');
+    await field.press('Enter');
+    await field.pressSequentially('Fiction, ');
+    await expect(page.getByRole('button', { name: 'Remove tag Fiction' })).toBeVisible();
+  });
+  // An existing tag is offered, and matched regardless of case.
+  await editTags('Mixed Page Sizes', async (field) => {
+    await page.getByRole('button', { name: 'Add tag Fiction' }).click();
+    await field.fill('tbr');
+  });
+  await editTags('A Complete', async (field) => {
+    await field.fill('Tech/Cyber');
+  });
+
+  await expect(tagFilter.getByRole('button')).toHaveText(['Fiction2', 'TBR2', 'Tech/Cyber1']);
+  await tagFilter.getByRole('button', { name: /^TBR/ }).click();
+  expect(await titles(page)).toEqual(['Mixed Page Sizes', 'The Lighthouse Keeper']);
+  await tagFilter.getByRole('button', { name: /^Tech\/Cyber/ }).click();
+  await expect(page.getByText('No books here are tagged “TBR” and “Tech/Cyber”.')).toBeVisible();
+  await tagFilter.getByRole('button', { name: 'Clear' }).click();
+  await expect(page.getByRole('button', { name: /^Open / })).toHaveCount(3);
+
+  // Search also finds tags, and tags survive a reload.
+  await page.reload();
+  await page.getByRole('searchbox').fill('cyber');
+  expect(await titles(page)).toEqual([expect.stringContaining('A Complete')]);
+  await page.getByRole('searchbox').fill('');
+
+  // Removing a tag from its only book takes it out of the filter.
+  await tagFilter.getByRole('button', { name: /^Tech\/Cyber/ }).click();
+  await editTags('A Complete', async () => {
+    await page.getByRole('button', { name: 'Remove tag Tech/Cyber' }).click();
+  });
+  await expect(tagFilter.getByRole('button')).toHaveText(['Fiction2', 'TBR2']);
+  await expect(page.getByRole('button', { name: /^Open / })).toHaveCount(3);
+});
+
+test('rates a book out of five stars', async ({ page }) => {
+  await importBooks(page, 'novel.pdf');
+  const openDialog = async () => {
+    await page.getByRole('button', { name: 'Options for The Lighthouse Keeper' }).click();
+    await page.getByRole('menuitem', { name: 'Edit details' }).click();
+  };
+  const filled = () => page.locator('.star[data-filled=true]').count();
+  // The radios are hidden behind the star drawn for each.
+  const star = (n: number) => page.locator('.star').nth(n - 1);
+
+  const shelfRating = page.getByRole('list', { name: 'Bookshelf' }).getByRole('img', { name: /^Rated / });
+
+  await expect(shelfRating).toHaveCount(0);
+  await openDialog();
+  expect(await filled()).toBe(0);
+  await star(4).click();
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('dialog')).toBeHidden();
+  // Shown under the title once there is one.
+  await expect(shelfRating).toHaveAccessibleName('Rated 4 out of 5');
+
+  await page.reload();
+  await expect(shelfRating).toHaveAccessibleName('Rated 4 out of 5');
+  await openDialog();
+  await expect(page.getByRole('radio', { name: '4 stars' })).toBeChecked();
+  expect(await filled()).toBe(4);
+  // Arrow keys move the rating, and clicking the current rating clears it.
+  await page.getByRole('radio', { name: '4 stars' }).press('ArrowLeft');
+  await expect(page.getByRole('radio', { name: '3 stars' })).toBeChecked();
+  await star(3).click();
+  await expect(page.getByRole('radio', { checked: true })).toHaveCount(0);
+  await star(2).click();
+  await expect(page.getByRole('radio', { name: '2 stars' })).toBeChecked();
+  await page.getByRole('button', { name: 'Clear rating' }).click();
+  await expect(page.getByRole('radio', { checked: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('dialog')).toBeHidden();
+  await expect(shelfRating).toHaveCount(0);
+
+  await page.reload();
+  await expect(shelfRating).toHaveCount(0);
+  await openDialog();
+  await expect(page.getByRole('radio', { checked: true })).toHaveCount(0);
+});
+
 test('edits, downloads and removes a book', async ({ page }) => {
   await importBooks(page, 'the-quiet_harbour.pdf');
   await page.getByRole('button', { name: 'Edit' }).click();

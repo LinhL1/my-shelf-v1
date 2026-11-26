@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import { openBook } from '../lib/router';
 import type { Book } from '../types';
+import { StarIcon } from '../ui/icons';
 import { Book3D } from './Book3D';
 import { BookMenu, type BookAction } from './BookMenu';
 import { shelfPerspective, type Placed } from './bookGeometry';
@@ -61,6 +62,7 @@ function Caption({ book, onAction }: { book: Book; onAction: ShelfProps['onActio
       <p className="mt-0.5 truncate text-xs text-muted" title={book.author || undefined}>
         {book.author || 'Unknown author'}
       </p>
+      {book.rating !== null && <Stars rating={book.rating} />}
       {book.lastOpened !== null && (
         <div className="mt-2.5">
           <div
@@ -79,6 +81,19 @@ function Caption({ book, onAction }: { book: Book; onAction: ShelfProps['onActio
         </div>
       )}
       <BookMenu book={book} onAction={(action) => onAction(action, book)} />
+    </div>
+  );
+}
+
+function Stars({ rating }: { rating: number }) {
+  return (
+    <div className="mt-1.5 flex gap-px" role="img" aria-label={`Rated ${rating} out of 5`}>
+      {[1, 2, 3, 4, 5].map((n) => (
+        <StarIcon
+          key={n}
+          className={`size-3 ${n <= rating ? 'fill-current text-wood' : 'text-[#d6d3cb]'}`}
+        />
+      ))}
     </div>
   );
 }

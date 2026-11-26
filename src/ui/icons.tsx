@@ -62,7 +62,10 @@ export const NoteIcon = icon(<path d="M5 5h14v10.5L14.5 20H5zM14.5 20v-4.5H19M8.
 export const TrashIcon = icon(
   <path d="M5 7h14M10 7V4.5h4V7M7 7l.8 12.5h8.4L17 7M10.3 10.5v5.5M13.7 10.5v5.5" />,
 );
-export const CheckIcon = icon(<path d="M5 12.5l4.5 4.5L19 7.5" />);
+export const StarIcon = icon(
+  <path d="M12 3.8l2.5 5.2 5.7.8-4.1 4 1 5.7L12 16.8l-5.1 2.7 1-5.7-4.1-4 5.7-.8z" />,
+);
+export const CheckIcon =icon(<path d="M5 12.5l4.5 4.5L19 7.5" />);
 export const AlertIcon = icon(
   <>
     <circle cx="12" cy="12" r="8" />

@@ -1,3 +1,4 @@
+import { hasTag } from '../lib/tags';
 import type { Book } from '../types';
 
 export const VIEWS = ['all', 'read', 'added'] as const;
@@ -20,11 +21,21 @@ const comparators: Record<Sort, (a: Book, b: Book) => number> = {
     Number(!a.author) - Number(!b.author) || collator.compare(a.author, b.author) || byTitle(a, b),
 };
 
-/** Applies the current view, search and sort to the collection. */
-export function selectBooks(books: Book[], view: View, sort: Sort, query: string) {
+/**
+ * Applies the current view, tag filter, search and sort to the collection. A book must carry
+ * every selected tag, so “TBR” and “Fiction” together narrow to fiction still to be read.
+ */
+export function selectBooks(
+  books: Book[],
+  view: View,
+  sort: Sort,
+  query: string,
+  tags: readonly string[] = [],
+) {
   const terms = fold(query).split(/\s+/).filter(Boolean);
   const matches = books.filter((book) => {
-    const text = fold(`${book.title} ${book.author}`);
+    if (!tags.every((tag) => hasTag(book.tags, tag))) return false;
+    const text = fold(`${book.title} ${book.author} ${book.tags.join(' ')}`);
     return terms.every((term) => text.includes(term));
   });
 

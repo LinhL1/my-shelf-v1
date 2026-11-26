@@ -3,6 +3,7 @@ import { useLibrary } from '../lib/LibraryProvider';
 import { getFile } from '../lib/db';
 import { openBook } from '../lib/router';
 import { useElementSize } from '../lib/useElementSize';
+import { collectTags, hasTag, removeTag } from '../lib/tags';
 import { usePreference } from '../lib/usePreference';
 import type { Book } from '../types';
 import { ChevronDownIcon, PlusIcon, SearchIcon } from '../ui/icons';
@@ -26,21 +27,38 @@ const SORT_LABELS: Record<Sort, string> = {
   author: 'Author',
 };
 
-/** Scroll position to return to when a book is closed. */
+/** Scroll position and tag filter to return to when a book is closed. */
 let lastScroll = 0;
+let lastTags: string[] = [];
 
 export function LibraryView() {
   const { books, status, importFiles } = useLibrary();
   const [query, setQuery] = useState('');
   const [view, setView] = usePreference('view', VIEWS, 'all');
   const [sort, setSort] = usePreference('sort', SORTS, 'added');
+  const [chosenTags, setChosenTags] = useState(lastTags);
   const [dialog, setDialog] = useState<{ kind: 'edit' | 'remove'; bookId: string } | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const [shelfRef, { width: shelfWidth }] = useElementSize<HTMLDivElement>();
   const dragging = useFileDrop(importFiles);
 
+  const allTags = useMemo(() => collectTags(books), [books]);
+  // A tag taken off its last book drops out of the filter.
+  const activeTags = useMemo(
+    () => chosenTags.filter((tag) => hasTag(allTags.map((t) => t.tag), tag)),
+    [chosenTags, allTags],
+  );
+  const toggleTag = (tag: string) => {
+    const next = hasTag(activeTags, tag) ? removeTag(activeTags, tag) : [...activeTags, tag];
+    lastTags = next;
+    setChosenTags(next);
+  };
+
   const { gap, padding, scale } = shelfMetrics(shelfWidth);
-  const visible = useMemo(() => selectBooks(books, view, sort, query), [books, view, sort, query]);
+  const visible = useMemo(
+    () => selectBooks(books, view, sort, query, activeTags),
+    [books, view, sort, query, activeTags],
+  );
   const shelves = useMemo(
     () => (shelfWidth > 0 ? packShelves(visible, shelfWidth - padding * 2, gap, scale) : []),
     [visible, shelfWidth, padding, gap, scale],
@@ -69,7 +87,7 @@ export function LibraryView() {
     <div className="min-h-dvh">
       <header className="sticky top-0 z-10 border-b border-line bg-paper/95">
         <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:gap-6 sm:px-8">
-          <h1 className="shrink-0 font-serif text-lg">My Shelf</h1>
+          <h1 className="shrink-0 font-serif text-lg"></h1>
           <label className="relative ml-auto w-full max-w-64 min-w-0">
             <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted" />
             <input
@@ -81,9 +99,13 @@ export function LibraryView() {
               onChange={(event) => setQuery(event.target.value)}
             />
           </label>
-          <button type="button" className="button button-primary shrink-0" onClick={pickFiles}>
+          <button
+            type="button"
+            className="button button-primary button-round shrink-0"
+            aria-label="Add book"
+            onClick={pickFiles}
+          >
             <PlusIcon className="size-4" />
-            Add Book
           </button>
         </div>
       </header>
@@ -137,6 +159,34 @@ export function LibraryView() {
             )}
           </div>
         )}
+        {books.length > 0 && allTags.length > 0 && (
+          <div className="-mt-1 flex flex-wrap items-center gap-1.5 pb-3" role="group" aria-label="Filter by tag">
+            {allTags.map(({ tag, count }) => (
+              <button
+                key={tag}
+                type="button"
+                className="tag-chip"
+                aria-pressed={hasTag(activeTags, tag)}
+                onClick={() => toggleTag(tag)}
+              >
+                {tag}
+                <span className="tag-chip-count">{count}</span>
+              </button>
+            ))}
+            {activeTags.length > 0 && (
+              <button
+                type="button"
+                className="ml-1 py-1 text-sm text-muted transition-colors hover:text-ink"
+                onClick={() => {
+                  lastTags = [];
+                  setChosenTags([]);
+                }}
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        )}
 
         <div ref={shelfRef}>
           {hasShelves && (
@@ -180,10 +230,12 @@ export function LibraryView() {
           </div>
         )}
         {status === 'ready' && books.length > 0 && visible.length === 0 && (
-          <Message title={query.trim() ? 'No matching books' : 'Nothing here yet'}>
+          <Message title={query.trim() || activeTags.length ? 'No matching books' : 'Nothing here yet'}>
             {query.trim()
-              ? `Nothing matches “${query.trim()}”.`
-              : 'Books you open will appear here.'}
+              ? `Nothing matches “${query.trim()}”${activeTags.length ? ' with these tags' : ''}.`
+              : activeTags.length
+                ? `No books here are tagged ${activeTags.map((t) => `“${t}”`).join(' and ')}.`
+                : 'Books you open will appear here.'}
           </Message>
         )}
       </main>

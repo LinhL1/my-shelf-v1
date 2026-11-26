@@ -66,12 +66,18 @@ async function recoverPosition(db: IDBPDatabase<ShelfSchema>) {
   await tx.done;
 }
 
+/** Fills in fields that books stored by earlier versions of the app do not have. */
+function upgradeBook(book: Book): Book {
+  return { ...book, tags: book.tags ?? [], rating: book.rating ?? null };
+}
+
 export async function listBooks(): Promise<Book[]> {
-  return (await database()).getAll('books');
+  return (await (await database()).getAll('books')).map(upgradeBook);
 }
 
 export async function getBook(id: string) {
-  return (await database()).get('books', id);
+  const book = await (await database()).get('books', id);
+  return book && upgradeBook(book);
 }
 
 export async function getCover(id: string) {
